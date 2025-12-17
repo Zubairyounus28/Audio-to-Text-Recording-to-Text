@@ -35,33 +35,56 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
     generateAndDownloadDocx(transcript, `ScribeFlow-Transcript-${Date.now()}.docx`);
   };
 
-  const handleGenerateAudio = async () => {
-    if (!transcript) return;
+  // Internal helper to generate audio and return the URL
+  const generateAudioInternal = async (voice: string): Promise<string | null> => {
+    if (!transcript) return null;
     
     setIsGeneratingAudio(true);
     setAudioUrl(null);
 
     try {
-      const pcmData = await generateSpeech(transcript, selectedVoice);
+      const pcmData = await generateSpeech(transcript, voice);
       const wavBlob = createWavBlob(pcmData, 24000);
       const url = URL.createObjectURL(wavBlob);
       setAudioUrl(url);
+      return url;
     } catch (error) {
       console.error(error);
       alert("Failed to generate audio. The text might be too long or the service is busy.");
+      return null;
     } finally {
       setIsGeneratingAudio(false);
     }
   };
 
-  const handleDownloadAudio = () => {
+  const handleGenerateClick = async () => {
+    await generateAudioInternal(selectedVoice);
+  };
+
+  const downloadAudioFromUrl = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ScribeFlow-Audio-${Date.now()}.wav`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Quick download from toolbar: generates if needed, then downloads
+  const handleQuickAudioDownload = async () => {
     if (audioUrl) {
-      const link = document.createElement('a');
-      link.href = audioUrl;
-      link.download = `ScribeFlow-Audio-${Date.now()}.wav`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadAudioFromUrl(audioUrl);
+    } else {
+      const url = await generateAudioInternal(selectedVoice);
+      if (url) {
+        downloadAudioFromUrl(url);
+      }
+    }
+  };
+
+  const handleDownloadExistingAudio = () => {
+    if (audioUrl) {
+      downloadAudioFromUrl(audioUrl);
     }
   };
 
@@ -71,7 +94,7 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
       {/* Main Transcript Area */}
       <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap gap-2 items-center justify-between bg-slate-50/50">
           <div className="flex items-center space-x-2 text-slate-700">
              <FileText className="w-5 h-5 text-blue-600" />
              <span className="font-semibold text-sm uppercase tracking-wide">Transcript</span>
@@ -93,6 +116,19 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
             >
               <Download className="w-4 h-4 mr-2" />
               DOCX
+            </button>
+
+            <button 
+              onClick={handleQuickAudioDownload}
+              disabled={isGeneratingAudio}
+              className="flex items-center px-3 py-1.5 bg-purple-600 hover:bg-purple-700 border border-purple-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isGeneratingAudio ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Music className="w-4 h-4 mr-2" />
+              )}
+              Audio
             </button>
           </div>
         </div>
@@ -122,7 +158,7 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
       <div className="w-full lg:w-80 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-fit lg:h-full">
          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-2">
             <Volume2 className="w-5 h-5 text-purple-600" />
-            <span className="font-semibold text-sm uppercase tracking-wide text-slate-700">Audio & Voice</span>
+            <span className="font-semibold text-sm uppercase tracking-wide text-slate-700">Audio Settings</span>
          </div>
          
          <div className="p-5 flex flex-col gap-6">
@@ -148,25 +184,25 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
                </div>
             </div>
 
-            {/* Generate Button */}
+            {/* Generate Button (Sidebar) */}
             <button
-              onClick={handleGenerateAudio}
+              onClick={handleGenerateClick}
               disabled={isGeneratingAudio}
               className={`w-full py-3 rounded-xl font-medium shadow-sm transition-all flex items-center justify-center ${
                 isGeneratingAudio 
                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                   : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]'
+                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-[0.98]'
               }`}
             >
               {isGeneratingAudio ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Generating...
+                  Processing...
                 </>
               ) : (
                 <>
                   <Play className="w-5 h-5 mr-2 fill-current" />
-                  Generate Audio
+                  Regenerate Audio
                 </>
               )}
             </button>
@@ -185,11 +221,11 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
                     className="w-full h-10 rounded-lg focus:outline-none"
                  />
                  <button
-                    onClick={handleDownloadAudio}
+                    onClick={handleDownloadExistingAudio}
                     className="w-full flex items-center justify-center py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
                  >
                     <Download className="w-4 h-4 mr-2" />
-                    Download Audio (.WAV)
+                    Download .WAV
                  </button>
               </div>
             ) : (
@@ -197,7 +233,7 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
                   <div className="bg-white p-3 rounded-full shadow-sm mb-3">
                      <Music className="w-6 h-6 text-slate-300" />
                   </div>
-                  <p className="text-sm text-slate-400">Generate audio to listen</p>
+                  <p className="text-sm text-slate-400">Select voice & generate</p>
                </div>
             )}
          </div>

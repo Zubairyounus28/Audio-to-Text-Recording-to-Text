@@ -63,33 +63,102 @@ export const transcribeAudio = async (audioBlob: Blob, mimeType: string, languag
   }
 };
 
+// Helper to chunk text to avoid hitting the 8192 token limit of the TTS model
+const MAX_CHAR_LIMIT = 3000; // Conservative limit (~750 tokens) to be safe
+
+function chunkText(text: string): string[] {
+  const chunks: string[] = [];
+  // Split by generic sentence delimiters including newlines to keep flow natural
+  const rawSentences = text.match(/[^.!?\n]+[.!?\n]+(\s+|$)|[^.!?\n]+$/g) || [text];
+  
+  let currentChunk = '';
+  
+  for (const sentence of rawSentences) {
+    // If a single sentence is larger than limit (unlikely but possible), we split it hard
+    if (sentence.length > MAX_CHAR_LIMIT) {
+       if (currentChunk) {
+           chunks.push(currentChunk.trim());
+           currentChunk = '';
+       }
+       
+       let remaining = sentence;
+       while (remaining.length > 0) {
+           if (remaining.length <= MAX_CHAR_LIMIT) {
+               currentChunk = remaining;
+               break;
+           }
+           // Try to break at a space
+           let breakIndex = remaining.lastIndexOf(' ', MAX_CHAR_LIMIT);
+           if (breakIndex === -1) breakIndex = MAX_CHAR_LIMIT;
+           
+           chunks.push(remaining.substring(0, breakIndex).trim());
+           remaining = remaining.substring(breakIndex);
+       }
+    } else if ((currentChunk + sentence).length <= MAX_CHAR_LIMIT) {
+      currentChunk += sentence;
+    } else {
+      chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks;
+}
+
 export const generateSpeech = async (text: string, voiceName: string = 'Puck'): Promise<Uint8Array> => {
   try {
-    // Using flash-preview-tts for text-to-speech
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: {
-        parts: [{ text: text }]
-      },
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName }
+    const textChunks = chunkText(text);
+    const audioChunks: Uint8Array[] = [];
+    let totalLength = 0;
+
+    // Process chunks sequentially
+    for (const chunk of textChunks) {
+       if (!chunk.trim()) continue;
+
+       const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: {
+          parts: [{ text: chunk }]
+        },
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName }
+            }
           }
         }
+      });
+      
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioData = base64ToUint8Array(base64Audio);
+        audioChunks.push(audioData);
+        totalLength += audioData.length;
       }
-    });
-    
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    
-    if (!base64Audio) {
-      throw new Error("No audio content generated");
     }
     
-    return base64ToUint8Array(base64Audio);
+    if (totalLength === 0) {
+      throw new Error("No audio content generated from Gemini.");
+    }
+
+    // Concatenate chunks
+    const combinedAudio = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of audioChunks) {
+      combinedAudio.set(chunk, offset);
+      offset += chunk.length;
+    }
+    
+    return combinedAudio;
+
   } catch (error) {
     console.error("Gemini TTS Error:", error);
-    throw new Error("Failed to generate speech audio.");
+    // Return a more user-friendly error if possible, or rethrow
+    throw new Error("Failed to generate speech audio. The text might be too complex or the service is temporarily unavailable.");
   }
 };
