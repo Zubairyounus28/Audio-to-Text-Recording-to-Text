@@ -1,0 +1,7 @@
+{
+  "name": "ScribeFlow - Urdu/English Transcriber",
+  "description": "A professional audio transcription tool that listens to mixed Urdu and English speech and converts it into a downloadable Word document using Gemini AI.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
