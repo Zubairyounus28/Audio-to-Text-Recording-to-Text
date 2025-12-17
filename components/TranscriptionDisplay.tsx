@@ -203,7 +203,7 @@ const TranscriptionDisplay: React.FC<TranscriptionDisplayProps> = ({ transcript,
          </div>
 
          <div className="mt-auto p-4 bg-slate-50 text-[10px] text-slate-400 text-center leading-tight">
-            * Uses standard Gemini AI voices. For cloning, specialized tools are required.
+            * Uses standard Gemini AI voices.
          </div>
       </div>
     </div>

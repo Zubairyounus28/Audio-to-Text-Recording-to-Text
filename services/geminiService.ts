@@ -65,6 +65,7 @@ export const transcribeAudio = async (audioBlob: Blob, mimeType: string, languag
 
 export const generateSpeech = async (text: string, voiceName: string = 'Puck'): Promise<Uint8Array> => {
   try {
+    // Using flash-preview-tts for text-to-speech
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: {
