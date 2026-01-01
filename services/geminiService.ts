@@ -21,14 +21,19 @@ const getSystemInstruction = (language: Language): string => {
       return `${baseInstruction}
       5. The audio is in Urdu. Transcribe primarily in Urdu script (Nastaliq style unicode).
       6. If English words are used, you may keep them in English script if it represents clear code-switching, otherwise transliterate standard terms.`;
+    case 'Siraiki':
+      return `${baseInstruction}
+      5. The audio is in Siraiki. Transcribe using the Siraiki/Urdu script (Arabic-based Shahmukhi script).
+      6. Ensure specific Siraiki characters (like heavy consonants unique to the language) are represented correctly if using standard Unicode blocks.`;
     case 'English':
       return `${baseInstruction}
       5. The audio is in English. Transcribe in standard English.`;
     case 'Mixed':
     default:
       return `${baseInstruction}
-      5. The audio contains mixed speech in Urdu and English.
-      6. Use proper Urdu script (Nastaliq style unicode) for Urdu parts and English script for English parts.`;
+      5. The audio contains mixed speech in Urdu, Siraiki, and English.
+      6. Use proper scripts for each: Nastaliq style for Urdu/Siraiki and English script for English parts.
+      7. Detect the language shifts naturally.`;
   }
 };
 

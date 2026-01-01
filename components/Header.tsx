@@ -19,6 +19,8 @@ const Header: React.FC = () => {
             <span>Gemini AI Active</span>
           </div>
           <div className="hidden sm:flex items-center space-x-1 border-l pl-4 border-slate-200">
+             <span className="font-medium text-slate-700">Siraiki</span>
+             <span>,</span>
              <span className="font-medium text-slate-700">Urdu</span>
              <span>&</span>
              <span className="font-medium text-slate-700">English</span>

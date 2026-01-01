@@ -144,7 +144,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ appState, onRecordingComp
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm appearance-none"
               style={{ backgroundImage: 'none' }} // Remove default arrow if needed, but standard is fine
             >
-              <option value="Mixed">Mixed (Urdu & English)</option>
+              <option value="Mixed">Mixed (Siraiki, Urdu & English)</option>
+              <option value="Siraiki">Siraiki Only</option>
               <option value="Urdu">Urdu Only</option>
               <option value="English">English Only</option>
             </select>

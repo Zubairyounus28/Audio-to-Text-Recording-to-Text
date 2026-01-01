@@ -6,11 +6,11 @@ export enum AppState {
   ERROR = 'ERROR'
 }
 
-export type Language = 'Mixed' | 'Urdu' | 'English';
+export type Language = 'Mixed' | 'Urdu' | 'English' | 'Siraiki';
 
 export interface TranscriptionResult {
   text: string;
-  language: string; // 'Urdu' | 'English' | 'Mixed'
+  language: string; // 'Urdu' | 'English' | 'Mixed' | 'Siraiki'
   timestamp: string;
 }
 
